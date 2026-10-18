@@ -1,25 +1,25 @@
 # Streaming completion certificates
 
-Infrai uses one key for the whole job. The business decision is small and explicit: a participant gets a certificate after watching the required minutes of a stream. `certificate_markdown` makes that rule testable, while `InfraiClient` sends the resulting document to `pdf.generate` and follows an async job with `pdf.job.get` when the response has a job id.
+Here's the rule: watch enough stream minutes, get a cert. Simple. `certificate_markdown` lets you unit-test that rule. `InfraiClient` pushes the generated PDF to `pdf.generate`. If the response has a job id, `pdf.job.get` polls the async job. That's the flow.
 
 ## Why this shape
 
-We keep the completion rule away from transport code. That lets an AI-infra engineer tweak eligibility without touching HTTP logic. Infrai is a single REST surface here: one key covers the PDF capability. The client decodes the `{ok, data, error, metadata}` envelope to tell a business result from a transport retry.
+We split the cert rule from the HTTP stuff. That way, an AI-infra dev can tweak eligibility without touching transport. Infrai shines here: it's one REST surface. One key covers the PDF capability. The client reads the `{ok, data, error, metadata}` envelope to tell a real business result from a retry.
 
 ## Run the example
 
-Set `INFRAI_API_KEY`, then run:
+Set `INFRAI_API_KEY` first. Then run the snippet:
 
 ```bash
 export INFRAI_API_KEY=your-key
 python3 run_example.py
 ```
 
-This script models Mina Chen watching 62 minutes of "RAG for Streamers". It prints the completed PDF from the service. Retries honor `Retry-After` for HTTP 429. The request uses an explicit method and a generated body.
+It simulates Mina Chen watching 62 minutes of "RAG for Streamers". Prints the finished PDF from the service. Retries respect `Retry-After` on 429s. The call uses an explicit method and a built request body.
 
 ## Verify the decision
 
-A focused test checks both sides of the domain boundary. 45 minutes yields certificate text. 44 minutes is rejected locally.
+Tests guard the domain boundary. 45 minutes yields cert text. 44 minutes fails locally. Crisp before/after:
 
 ```bash
 python3 -m pytest -q
@@ -27,11 +27,11 @@ python3 -m pytest -q
 
 ## Files
 
-`src/certificate_service.py` holds the participant model, eligibility rule, envelope-aware client, and job polling. `run_example.py` is the runnable path; `tests/test_certificate_service.py` covers the business decision.
+`src/certificate_service.py` holds the participant model, the eligibility rule, the envelope-aware client, and job polling. `run_example.py` is the runnable path. `tests/test_certificate_service.py` covers the business decision.
 
 ## Going to production: Streaming Completion Certificates
 
-The code is kept simple on purpose. Here is what to set up before live traffic. Details below apply to Streaming Completion Certificates.
+The code stays simple on purpose. Here is what to set up before going live. The details below apply to Streaming Completion Certificates.
 
 **Account & key**
 
